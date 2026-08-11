@@ -1,12 +1,3 @@
-# Deploy to ValueHub Apps EC2 (compose-managed)
-# Place this file in each service repo as .github/workflows/deploy-aws.yml
-# and set repo/org secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN,
-# APPS_EC2_HOST, APPS_EC2_USER, APPS_EC2_SSH_KEY
-#
-# Required repo variable (or edit defaults below):
-#   IMAGE_NAME = byeonghyunchoi/valuehub-<service>
-#   COMPOSE_SERVICE = <compose service key, e.g. chat>
-
 name: Deploy AWS
 
 on:
@@ -27,15 +18,38 @@ jobs:
     env:
       IMAGE_NAME: ${{ vars.IMAGE_NAME }}
       COMPOSE_SERVICE: ${{ vars.COMPOSE_SERVICE }}
-      IMAGE_TAG: ${{ vars.IMAGE_TAG || 'dev' }}
+      IMAGE_TAG: ${{ vars.IMAGE_TAG }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate vars
+      - name: Validate configuration
         run: |
-          test -n "$IMAGE_NAME" || (echo "Set repo variable IMAGE_NAME" && exit 1)
-          test -n "$COMPOSE_SERVICE" || (echo "Set repo variable COMPOSE_SERVICE" && exit 1)
+          set -euo pipefail
+          test -n "${IMAGE_NAME}" || { echo "Missing repo variable IMAGE_NAME"; exit 1; }
+          test -n "${COMPOSE_SERVICE}" || { echo "Missing repo variable COMPOSE_SERVICE"; exit 1; }
+          if [ -z "${IMAGE_TAG}" ]; then echo "IMAGE_TAG=dev" >> "$GITHUB_ENV"; else echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"; fi
+          test -n "${{ secrets.APPS_EC2_HOST }}" || { echo "Missing secret APPS_EC2_HOST"; exit 1; }
+          test -n "${{ secrets.APPS_EC2_USER }}" || { echo "Missing secret APPS_EC2_USER"; exit 1; }
+          test -n "${{ secrets.APPS_EC2_SSH_KEY }}" || { echo "Missing secret APPS_EC2_SSH_KEY"; exit 1; }
+          test -n "${{ secrets.DOCKERHUB_USERNAME }}" || { echo "Missing secret DOCKERHUB_USERNAME"; exit 1; }
+          test -n "${{ secrets.DOCKERHUB_TOKEN }}" || { echo "Missing secret DOCKERHUB_TOKEN"; exit 1; }
+          echo "IMAGE_NAME=${IMAGE_NAME}"
+          echo "COMPOSE_SERVICE=${COMPOSE_SERVICE}"
+
+      - name: Prepare application.jar when Dockerfile needs it
+        run: |
+          set -euo pipefail
+          if grep -q 'COPY application.jar' Dockerfile && ! grep -q 'AS builder' Dockerfile; then
+            echo "Legacy Dockerfile detected — building jar first"
+            chmod +x gradlew
+            ./gradlew bootJar -x test --no-daemon
+            JAR="$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-plain.jar' | head -1)"
+            test -n "$JAR"
+            cp "$JAR" application.jar
+          else
+            echo "Multi-stage Dockerfile — jar build happens in Docker"
+          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -66,10 +80,13 @@ jobs:
           username: ${{ secrets.APPS_EC2_USER }}
           key: ${{ secrets.APPS_EC2_SSH_KEY }}
           script_stop: true
+          command_timeout: 20m
           script: |
             set -euo pipefail
             cd /opt/valuehub-aws-infra
+            test -f compose.prod-apps.yml
+            test -f .env
             IMAGE_TAG="${{ env.IMAGE_TAG }}" docker compose -f compose.prod-apps.yml --env-file .env pull "${{ env.COMPOSE_SERVICE }}"
             IMAGE_TAG="${{ env.IMAGE_TAG }}" docker compose -f compose.prod-apps.yml --env-file .env up -d --no-deps "${{ env.COMPOSE_SERVICE }}"
             docker image prune -f
-            docker ps --filter name=valuehub-"${{ env.COMPOSE_SERVICE }}"
+            docker ps --filter "name=valuehub-${{ env.COMPOSE_SERVICE }}"
