@@ -1,0 +1,75 @@
+# Deploy to ValueHub Apps EC2 (compose-managed)
+# Place this file in each service repo as .github/workflows/deploy-aws.yml
+# and set repo/org secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN,
+# APPS_EC2_HOST, APPS_EC2_USER, APPS_EC2_SSH_KEY
+#
+# Required repo variable (or edit defaults below):
+#   IMAGE_NAME = byeonghyunchoi/valuehub-<service>
+#   COMPOSE_SERVICE = <compose service key, e.g. chat>
+
+name: Deploy AWS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-aws-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  build-push-deploy:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: ${{ vars.IMAGE_NAME }}
+      COMPOSE_SERVICE: ${{ vars.COMPOSE_SERVICE }}
+      IMAGE_TAG: ${{ vars.IMAGE_TAG || 'dev' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate vars
+        run: |
+          test -n "$IMAGE_NAME" || (echo "Set repo variable IMAGE_NAME" && exit 1)
+          test -n "$COMPOSE_SERVICE" || (echo "Set repo variable COMPOSE_SERVICE" && exit 1)
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy on Apps EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.APPS_EC2_HOST }}
+          username: ${{ secrets.APPS_EC2_USER }}
+          key: ${{ secrets.APPS_EC2_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/valuehub-aws-infra
+            IMAGE_TAG="${{ env.IMAGE_TAG }}" docker compose -f compose.prod-apps.yml --env-file .env pull "${{ env.COMPOSE_SERVICE }}"
+            IMAGE_TAG="${{ env.IMAGE_TAG }}" docker compose -f compose.prod-apps.yml --env-file .env up -d --no-deps "${{ env.COMPOSE_SERVICE }}"
+            docker image prune -f
+            docker ps --filter name=valuehub-"${{ env.COMPOSE_SERVICE }}"
