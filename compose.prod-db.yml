@@ -1,0 +1,103 @@
+# ValueHub Prod — DB EC2 only (MySQL + MongoDB single-node replica set)
+# Usage on DB EC2:
+#   cp env/db.env.example .env
+#   docker compose -f compose.prod-db.yml --env-file .env up -d
+
+services:
+  mysql:
+    image: mysql:8.4
+    platform: linux/amd64
+    container_name: valuehub-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-auth_db}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./scripts/mysql-init-schemas.sql:/docker-entrypoint-initdb.d/01-schemas.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    networks:
+      - valuehub-db
+
+  # Single-node replica set (chat requires replicaSet=). Fits t3.medium better than 3 nodes.
+  mongo:
+    image: mongo:7
+    platform: linux/amd64
+    container_name: valuehub-mongo
+    restart: unless-stopped
+    command: ["mongod", "--replSet", "${MONGODB_REPLICA_SET:-rs0}", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD}
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "-u",
+          "${MONGODB_USERNAME}",
+          "-p",
+          "${MONGODB_PASSWORD}",
+          "--authenticationDatabase",
+          "admin",
+          "--eval",
+          "db.adminCommand('ping').ok",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 50s
+    networks:
+      - valuehub-db
+
+  mongo-setup:
+    image: mongo:7
+    platform: linux/amd64
+    container_name: valuehub-mongo-setup
+    restart: "no"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      MONGODB_USERNAME: ${MONGODB_USERNAME}
+      MONGODB_PASSWORD: ${MONGODB_PASSWORD}
+      MONGODB_REPLICA_SET: ${MONGODB_REPLICA_SET:-rs0}
+      # Advertise address Apps EC2 will use (DB private IP). Override in .env.
+      MONGODB_ADVERTISE_HOST: ${MONGODB_ADVERTISE_HOST:-mongo}
+    entrypoint:
+      - bash
+      - -lc
+      - |
+        set -euo pipefail
+        AUTH=(-u "$$MONGODB_USERNAME" -p "$$MONGODB_PASSWORD" --authenticationDatabase admin)
+        until mongosh --quiet "$${AUTH[@]}" --eval "db.adminCommand('ping').ok" | grep -q 1; do sleep 2; done
+        OK=$$(mongosh --quiet "$${AUTH[@]}" --eval 'try { rs.status().ok } catch (e) { 0 }' || echo 0)
+        if [ "$$OK" != "1" ]; then
+          mongosh --quiet "$${AUTH[@]}" --eval "rs.initiate({_id: '$$MONGODB_REPLICA_SET', members: [{ _id: 0, host: '$$MONGODB_ADVERTISE_HOST:27017' }]})"
+          echo "replica set initiated with host $$MONGODB_ADVERTISE_HOST:27017"
+        else
+          echo "replica set already ok"
+        fi
+    networks:
+      - valuehub-db
+
+networks:
+  valuehub-db:
+    name: valuehub-db
+    driver: bridge
+
+volumes:
+  mysql-data:
+  mongo-data:

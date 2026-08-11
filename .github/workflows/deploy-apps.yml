@@ -1,0 +1,43 @@
+name: Deploy Apps (Prod)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "compose.prod-apps.yml"
+      - "env/**"
+      - "scripts/**"
+      - ".github/workflows/deploy-apps.yml"
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Docker image tag (default prod)"
+        required: false
+        default: "prod"
+
+concurrency:
+  group: deploy-apps-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.APPS_EC2_HOST }}
+          username: ${{ secrets.APPS_EC2_USER }}
+          key: ${{ secrets.APPS_EC2_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/valuehub-aws-infra
+            git fetch origin
+            git checkout main
+            git pull origin main
+            TAG="${{ github.event.inputs.image_tag || 'prod' }}"
+            IMAGE_TAG="$TAG" docker compose -f compose.prod-apps.yml --env-file .env pull
+            IMAGE_TAG="$TAG" docker compose -f compose.prod-apps.yml --env-file .env up -d --remove-orphans
+            docker image prune -f
+            IMAGE_TAG="$TAG" docker compose -f compose.prod-apps.yml --env-file .env ps

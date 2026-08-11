@@ -1,0 +1,9 @@
+.env
+**/.env
+secrets/*
+!secrets/README.md
+!secrets/.gitignore
+logs/
+*.pem
+.DS_Store
+Thumbs.db

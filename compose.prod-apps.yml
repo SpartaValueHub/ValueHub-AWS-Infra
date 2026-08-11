@@ -1,0 +1,282 @@
+# ValueHub Prod — Apps EC2 (all microservices + Redis)
+# DB runs on a separate EC2. Set MYSQL_HOST / MONGODB_HOST to DB private IP.
+#
+#   cp env/apps.env.example .env
+#   # put JWT PEMs in ./secrets/ (see secrets/README.md)
+#   docker compose -f compose.prod-apps.yml --env-file .env up -d
+
+x-app-common: &app-common
+  platform: linux/amd64
+  restart: unless-stopped
+  networks:
+    - valuehub-apps
+
+services:
+  redis:
+    <<: *app-common
+    image: redis:7-alpine
+    container_name: valuehub-redis
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  discovery:
+    <<: *app-common
+    image: byeonghyunchoi/valuehub-discovery:${IMAGE_TAG:-prod}
+    container_name: valuehub-discovery
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: "8761"
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx256m
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8761'"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+
+  gateway:
+    <<: *app-common
+    image: byeonghyunchoi/valuehub-gateway:${IMAGE_TAG:-prod}
+    container_name: valuehub-gateway
+    depends_on:
+      discovery:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: "8000"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka
+      SECURITY_JWT_ENABLED: ${SECURITY_JWT_ENABLED:-true}
+      JWT_PUBLIC_KEY_LOCATION: file:/secrets/jwt-public.pem
+      AUTH_COOKIE_ACCESS_NAME: ${AUTH_COOKIE_ACCESS_NAME:-vh_access_token}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx384m
+    volumes:
+      - ./secrets:/secrets:ro
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8000'"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+
+  auth:
+    <<: *app-common
+    image: byeonghyunchoi/valuehub-auth:${IMAGE_TAG:-prod}
+    container_name: valuehub-auth
+    depends_on:
+      discovery:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: "8081"
+      SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/auth_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka
+      JWT_PRIVATE_KEY_LOCATION: file:/secrets/jwt-private.pem
+      JWT_PUBLIC_KEY_LOCATION: file:/secrets/jwt-public.pem
+      JWT_ACCESS_TOKEN_MINUTES: ${JWT_ACCESS_TOKEN_MINUTES:-15}
+      JWT_REFRESH_TOKEN_DAYS: ${JWT_REFRESH_TOKEN_DAYS:-14}
+      PORTONE_API_SECRET: ${PORTONE_API_SECRET:-}
+      CI_HASH_KEY: ${CI_HASH_KEY:-}
+      CAPTCHA_ENABLED: ${CAPTCHA_ENABLED:-false}
+      RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY:-}
+      AUTH_ALLOWED_ORIGINS: ${AUTH_ALLOWED_ORIGINS}
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx384m
+    volumes:
+      - ./secrets:/secrets:ro
+
+  member:
+    <<: *app-common
+    image: byeonghyunchoi/valuehub-member:${IMAGE_TAG:-prod}
+    container_name: valuehub-member
+    depends_on:
+      discovery:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: "8083"
+      SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/member_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx256m
+
+  category:
+    <<: *app-common
+    image: byeonghyunchoi/valuehub-category:${IMAGE_TAG:-prod}
+    container_name: valuehub-category
+    depends_on:
+      discovery:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: "8084"
+      SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/category_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx256m
+
+  listing:
+    <<: *app-common
+    image: byeonghyunchoi/valuehub-listing:${IMAGE_TAG:-prod}
+    container_name: valuehub-listing
+    depends_on:
+      discovery:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: "8085"
+      SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/listing_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx256m
+
+  member-regions:
+    <<: *app-common
+    image: byeonghyunchoi/valuehub-member-regions:${IMAGE_TAG:-prod}
+    container_name: valuehub-member-regions
+    depends_on:
+      discovery:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: "8086"
+      SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/member_regions_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx256m
+
+  reports:
+    <<: *app-common
+    image: byeonghyunchoi/valuehub-reports:${IMAGE_TAG:-prod}
+    container_name: valuehub-reports
+    depends_on:
+      discovery:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: "8087"
+      SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/reports_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx256m
+
+  reservations:
+    <<: *app-common
+    image: byeonghyunchoi/valuehub-reservations:${IMAGE_TAG:-prod}
+    container_name: valuehub-reservations
+    depends_on:
+      discovery:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: "8092"
+      SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/reservations_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx256m
+
+  reviews:
+    <<: *app-common
+    image: byeonghyunchoi/valuehub-reviews:${IMAGE_TAG:-prod}
+    container_name: valuehub-reviews
+    depends_on:
+      discovery:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: "8088"
+      SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/reviews_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx256m
+
+  notifications:
+    <<: *app-common
+    image: byeonghyunchoi/valuehub-notifications:${IMAGE_TAG:-prod}
+    container_name: valuehub-notifications
+    depends_on:
+      discovery:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: "8089"
+      SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/notifications_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx256m
+
+  premium-plans:
+    <<: *app-common
+    image: byeonghyunchoi/valuehub-premium-plans:${IMAGE_TAG:-prod}
+    container_name: valuehub-premium-plans
+    depends_on:
+      discovery:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: "8090"
+      SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/premium_plans_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx256m
+
+  bo:
+    <<: *app-common
+    image: byeonghyunchoi/valuehub-bo:${IMAGE_TAG:-prod}
+    container_name: valuehub-bo
+    depends_on:
+      discovery:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: "8091"
+      SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/bo_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx256m
+
+  chat:
+    <<: *app-common
+    image: byeonghyunchoi/valuehub-chat:${IMAGE_TAG:-prod}
+    container_name: valuehub-chat
+    depends_on:
+      discovery:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: "8082"
+      SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/chat_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_MONGODB_URI: mongodb://${MONGODB_USERNAME}:${MONGODB_PASSWORD}@${MONGODB_HOST}:27017/${MONGODB_DATABASE}?replicaSet=${MONGODB_REPLICA_SET}&authSource=admin
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx512m
+
+networks:
+  valuehub-apps:
+    name: valuehub-apps
+    driver: bridge
+
+volumes:
+  redis-data:
