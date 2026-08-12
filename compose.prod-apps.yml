@@ -28,6 +28,8 @@ services:
     <<: *app-common
     image: byeonghyunchoi/valuehub-discovery:${IMAGE_TAG:-prod}
     container_name: valuehub-discovery
+    ports:
+      - "8761:8761"
     environment:
       SPRING_PROFILES_ACTIVE: dev
       SERVER_PORT: "8761"
