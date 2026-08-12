@@ -1,4 +1,4 @@
-# ValueHub Prod — Apps EC2 (all microservices + Redis)
+# ValueHub Prod ??Apps EC2 (all microservices + Redis)
 # DB runs on a separate EC2. Set MYSQL_HOST / MONGODB_HOST to DB private IP.
 #
 #   cp env/apps.env.example .env
@@ -26,7 +26,7 @@ services:
 
   discovery:
     <<: *app-common
-    image: byeonghyunchoi/valuehub-discovery:${IMAGE_TAG:-prod}
+    image: p4rksk1611/valuehub-discovery:${IMAGE_TAG:-prod}
     container_name: valuehub-discovery
     ports:
       - "8761:8761"
@@ -44,7 +44,7 @@ services:
 
   gateway:
     <<: *app-common
-    image: byeonghyunchoi/valuehub-gateway:${IMAGE_TAG:-prod}
+    image: p4rksk1611/valuehub-gateway:${IMAGE_TAG:-prod}
     container_name: valuehub-gateway
     depends_on:
       discovery:
@@ -74,7 +74,7 @@ services:
 
   auth:
     <<: *app-common
-    image: byeonghyunchoi/valuehub-auth:${IMAGE_TAG:-prod}
+    image: p4rksk1611/valuehub-auth:${IMAGE_TAG:-prod}
     container_name: valuehub-auth
     depends_on:
       discovery:
@@ -101,7 +101,7 @@ services:
 
   member:
     <<: *app-common
-    image: byeonghyunchoi/valuehub-member:${IMAGE_TAG:-prod}
+    image: p4rksk1611/valuehub-member:${IMAGE_TAG:-prod}
     container_name: valuehub-member
     depends_on:
       discovery:
@@ -117,7 +117,7 @@ services:
 
   category:
     <<: *app-common
-    image: byeonghyunchoi/valuehub-category:${IMAGE_TAG:-prod}
+    image: p4rksk1611/valuehub-category:${IMAGE_TAG:-prod}
     container_name: valuehub-category
     depends_on:
       discovery:
@@ -133,7 +133,7 @@ services:
 
   listing:
     <<: *app-common
-    image: byeonghyunchoi/valuehub-listing:${IMAGE_TAG:-prod}
+    image: p4rksk1611/valuehub-listing:${IMAGE_TAG:-prod}
     container_name: valuehub-listing
     depends_on:
       discovery:
@@ -149,7 +149,7 @@ services:
 
   member-regions:
     <<: *app-common
-    image: byeonghyunchoi/valuehub-member-regions:${IMAGE_TAG:-prod}
+    image: p4rksk1611/valuehub-member-regions:${IMAGE_TAG:-prod}
     container_name: valuehub-member-regions
     depends_on:
       discovery:
@@ -165,7 +165,7 @@ services:
 
   reports:
     <<: *app-common
-    image: byeonghyunchoi/valuehub-reports:${IMAGE_TAG:-prod}
+    image: p4rksk1611/valuehub-reports:${IMAGE_TAG:-prod}
     container_name: valuehub-reports
     depends_on:
       discovery:
@@ -181,7 +181,7 @@ services:
 
   reservations:
     <<: *app-common
-    image: byeonghyunchoi/valuehub-reservations:${IMAGE_TAG:-prod}
+    image: p4rksk1611/valuehub-reservations:${IMAGE_TAG:-prod}
     container_name: valuehub-reservations
     depends_on:
       discovery:
@@ -197,7 +197,7 @@ services:
 
   reviews:
     <<: *app-common
-    image: byeonghyunchoi/valuehub-reviews:${IMAGE_TAG:-prod}
+    image: p4rksk1611/valuehub-reviews:${IMAGE_TAG:-prod}
     container_name: valuehub-reviews
     depends_on:
       discovery:
@@ -213,7 +213,7 @@ services:
 
   notifications:
     <<: *app-common
-    image: byeonghyunchoi/valuehub-notifications:${IMAGE_TAG:-prod}
+    image: p4rksk1611/valuehub-notifications:${IMAGE_TAG:-prod}
     container_name: valuehub-notifications
     depends_on:
       discovery:
@@ -229,7 +229,7 @@ services:
 
   premium-plans:
     <<: *app-common
-    image: byeonghyunchoi/valuehub-premium-plans:${IMAGE_TAG:-prod}
+    image: p4rksk1611/valuehub-premium-plans:${IMAGE_TAG:-prod}
     container_name: valuehub-premium-plans
     depends_on:
       discovery:
@@ -245,7 +245,7 @@ services:
 
   bo:
     <<: *app-common
-    image: byeonghyunchoi/valuehub-bo:${IMAGE_TAG:-prod}
+    image: p4rksk1611/valuehub-bo:${IMAGE_TAG:-prod}
     container_name: valuehub-bo
     depends_on:
       discovery:
@@ -261,7 +261,7 @@ services:
 
   chat:
     <<: *app-common
-    image: byeonghyunchoi/valuehub-chat:${IMAGE_TAG:-prod}
+    image: p4rksk1611/valuehub-chat:${IMAGE_TAG:-prod}
     container_name: valuehub-chat
     depends_on:
       discovery:
