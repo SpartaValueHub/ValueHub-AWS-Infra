@@ -18,21 +18,21 @@ Apps EC2의 **공통 `.env` 하나**로 런타임 환경변수를 관리한다.
 
 ```mermaid
 flowchart TB
-  subgraph Git["Git (ValueHub-AWS-Infra 등)"]
-    C[compose.prod-apps.yml<br/>FOO: ${FOO}]
-    E[env/apps.env.example<br/>이름만 / 예시값]
+  subgraph Git["Git - ValueHub-AWS-Infra 등"]
+    C["compose.prod-apps.yml<br/>FOO: env 플레이스홀더"]
+    E["env/apps.env.example<br/>이름만 / 예시값"]
   end
 
   subgraph EC2["Apps EC2 /opt/valuehub-aws-infra"]
     ENV[".env<br/>FOO=실제비밀값"]
-    COMPOSE[compose.prod-apps.yml]
+    COMPOSE["compose.prod-apps.yml"]
     ENV -.->|compose up 시 읽음| COMPOSE
   end
 
   subgraph Containers["실행 중 컨테이너"]
-    AUTH[valuehub-auth<br/>환경변수 복사본]
-    GW[valuehub-gateway<br/>환경변수 복사본]
-    CHAT[valuehub-chat<br/>환경변수 복사본]
+    AUTH["valuehub-auth<br/>환경변수 복사본"]
+    GW["valuehub-gateway<br/>환경변수 복사본"]
+    CHAT["valuehub-chat<br/>환경변수 복사본"]
   end
 
   C -->|CD / scp| COMPOSE
@@ -82,9 +82,9 @@ sequenceDiagram
   participant EC2 as Apps EC2
   participant Ctr as 대상 컨테이너
 
-  Dev->>Git: compose에 FOO: ${FOO} 추가 PR
-  Git->>EC2: compose 반영 (CD 또는 scp)
-  Ops->>EC2: .env에 FOO=실제값 추가
+  Dev->>Git: compose에 FOO 플레이스홀더 추가 PR
+  Git->>EC2: compose 반영 CD 또는 scp
+  Ops->>EC2: .env에 FOO 실제값 추가
   Note over EC2,Ctr: 이 시점엔 아직 구 컨테이너는 옛값
   Ops->>Ctr: compose up -d --no-deps 서비스명
   EC2->>Ctr: 기동 시 .env 다시 읽어 주입
@@ -112,7 +112,7 @@ Auth만 쓰는 변수면 Gateway/Chat은 안 내려도 된다.
 
 ```mermaid
 flowchart TD
-  A[.env 파일 수정] --> B[디스크上的 내용만 변경]
+  A[.env 파일 수정] --> B[디스크의 내용만 변경]
   B --> C{이미 떠 있는 컨테이너?}
   C -->|그대로 두면| D[메모리의 옛 환경변수 유지]
   C -->|up -d 재생성| E[Compose가 .env 재읽기]
