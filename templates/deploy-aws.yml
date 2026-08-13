@@ -2,7 +2,7 @@ name: Deploy AWS
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   workflow_dispatch:
 
 permissions:
@@ -41,14 +41,14 @@ jobs:
         run: |
           set -euo pipefail
           if grep -q 'COPY application.jar' Dockerfile && ! grep -q 'AS builder' Dockerfile; then
-            echo "Legacy Dockerfile detected — building jar first"
+            echo "Legacy Dockerfile detected ??building jar first"
             chmod +x gradlew
             ./gradlew bootJar -x test --no-daemon
             JAR="$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-plain.jar' | head -1)"
             test -n "$JAR"
             cp "$JAR" application.jar
           else
-            echo "Multi-stage Dockerfile — jar build happens in Docker"
+            echo "Multi-stage Dockerfile ??jar build happens in Docker"
           fi
 
       - name: Set up Docker Buildx
