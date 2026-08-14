@@ -22,7 +22,6 @@ Gateway 통합 Swagger로 Auth/Chat 등 API 실검증까지 완료.
 
 ### 배포 흐름 (CI/CD 전용)
 
-코드가 서버에 반영되기까지의 과정만 본다. DB/API 요청은 포함하지 않는다.
 
 ```mermaid
 flowchart TD
@@ -73,14 +72,14 @@ sequenceDiagram
   participant Hub as Docker Hub
   participant Apps as Apps EC2
 
-  Dev->>GH: push to main 또는 develop
+  Dev->>GH: push to main 
   GH->>GHA: Deploy AWS 워크플로
   GHA->>Hub: build and push :prod
   GHA->>Apps: SSH docker compose pull/up
   Apps->>Apps: 해당 서비스만 갱신
 ```
 
-1. 서비스 레포 **`main` 또는 `develop`** 푸시
+1. 서비스 레포 **`main` 또는
 2. `Deploy AWS` 워크플로 실행  
    (`on.push.branches: [main, develop]`)
 3. Docker 이미지 빌드 → Docker Hub 푸시  
