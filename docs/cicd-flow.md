@@ -10,7 +10,7 @@ Gateway 통합 Swagger로 Auth/Chat 등 API 실검증까지 완료.
 
 | 구분 | 역할 | 인스턴스 | 스펙 | Elastic IP |
 | --- | --- | --- | --- | --- |
-| **Apps EC2** | Eureka, Gateway, 전 MSA, Redis | `i-0cc2c7df37a02b606` | t3.large | `54.116.150.139` |
+| **Apps EC2** | Eureka, Gateway, 전 MSA | `i-0cc2c7df37a02b606` | t3.large | `54.116.150.139` |
 | **DB EC2** | MySQL + MongoDB (단일 노드 RS) | `i-00753b29433e6351c` | t3.medium | `52.78.72.232` |
 
 - 리전: `ap-northeast-2` (서울)
@@ -20,20 +20,28 @@ Gateway 통합 Swagger로 Auth/Chat 등 API 실검증까지 완료.
 - Apps SG: `sg-095cc58b5a43c744b`
 - DB SG: `sg-023aefc5e5868a2f5`
 
+### 배포 흐름 (CI/CD 전용)
+
+
 ```mermaid
 flowchart TD
-  A[GitHub push<br/>main 또는 develop] --> B[GitHub Actions<br/>Deploy AWS]
-  B --> C[Docker Hub<br/>p4rksk1611 / IMAGE_TAG=prod]
-  C -->|SSH| D[Apps EC2<br/>54.116.150.139]
+  A[서비스 레포 push<br/>main] --> B[GitHub Actions<br/>Deploy AWS]
+  B --> C[Docker 이미지 빌드]
+  C --> D[Docker Hub push<br/>p4rksk1611 / tag prod]
+  D -->|SSH| E[Apps EC2<br/>54.116.150.139]
+  E --> F[docker compose pull/up<br/>해당 서비스만 갱신]
+```
 
-  subgraph Apps["Apps EC2"]
-    D --> E[Gateway :8000]
-    E --> F[Discovery :8761]
-    E --> G[MSA services]
-    E --> H[Redis]
-  end
+### API 요청 흐름 (런타임 전용)
 
-  G -->|private| I[DB EC2<br/>MySQL :3306 / Mongo :27017]
+이미 배포된 뒤, FE/클라이언트가 API를 칠 때의 경로만 본다. 배포 파이프라인은 포함하지 않는다.
+
+```mermaid
+flowchart TD
+  FE[FE / Swagger] -->|HTTP :8000| GW[Gateway<br/>Apps EC2]
+  GW --> EU[Discovery Eureka :8761]
+  GW -->|lb 라우팅| MSA[MSA 서비스들<br/>Auth Chat Member ...]
+  MSA -->|private IP| DB[DB EC2<br/>MySQL :3306 / Mongo :27017]
 ```
 
 ---
@@ -63,18 +71,15 @@ sequenceDiagram
   participant GHA as GitHub Actions
   participant Hub as Docker Hub
   participant Apps as Apps EC2
-  participant DB as DB EC2
 
-  Dev->>GH: push to main 또는 develop
+  Dev->>GH: push to main 
   GH->>GHA: Deploy AWS 워크플로
   GHA->>Hub: build and push :prod
   GHA->>Apps: SSH docker compose pull/up
   Apps->>Apps: 해당 서비스만 갱신
-  Note over Apps: Gateway :8000 / Eureka :8761 / MSA / Redis
-  Apps->>DB: private MySQL :3306 / Mongo :27017
 ```
 
-1. 서비스 레포 **`main` 또는 `develop`** 푸시
+1. 서비스 레포 `main` 푸쉬
 2. `Deploy AWS` 워크플로 실행  
    (`on.push.branches: [main, develop]`)
 3. Docker 이미지 빌드 → Docker Hub 푸시  
@@ -83,16 +88,13 @@ sequenceDiagram
 4. Apps EC2 SSH → `docker compose pull/up` 해당 서비스만 갱신  
    - 경로: `/opt/valuehub-aws-infra`  
    - compose가 EC2의 `.env`를 읽어 런타임 주입 (값은 배포가 수정하지 않음)
+   - DB EC2는 이 단계에서 배포 대상이 아님 (이미 떠 있는 DB에 Apps가 접속)
 
 ### 트리거 브랜치
 
 | 브랜치 | 푸시 시 배포 |
 | --- | --- |
-| `develop` | O (워크플로에 반영됨) |
-| `main` | O (기존과 동일) |
-
-같은 `deploy-aws.yml`에 `branches: [main, develop]`로 적어 두면 된다.  
-한 번 푸시했다고 두 브랜치가 동시에 도는 것은 아니고, **푸시된 그 브랜치만** 실행된다.
+| `main` | O  |
 
 `develop → main` 머지 시 워크플로 파일도 함께 올라가면 main 쪽 정의가 맞춰진다.
 
