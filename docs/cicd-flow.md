@@ -79,7 +79,7 @@ sequenceDiagram
   Apps->>Apps: 해당 서비스만 갱신
 ```
 
-1. 서비스 레포 **`main` 또는
+1. 서비스 레포 `main` 푸쉬
 2. `Deploy AWS` 워크플로 실행  
    (`on.push.branches: [main, develop]`)
 3. Docker 이미지 빌드 → Docker Hub 푸시  
@@ -94,11 +94,7 @@ sequenceDiagram
 
 | 브랜치 | 푸시 시 배포 |
 | --- | --- |
-| `develop` | O (워크플로에 반영됨) |
-| `main` | O (기존과 동일) |
-
-같은 `deploy-aws.yml`에 `branches: [main, develop]`로 적어 두면 된다.  
-한 번 푸시했다고 두 브랜치가 동시에 도는 것은 아니고, **푸시된 그 브랜치만** 실행된다.
+| `main` | O  |
 
 `develop → main` 머지 시 워크플로 파일도 함께 올라가면 main 쪽 정의가 맞춰진다.
 
