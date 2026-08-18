@@ -94,3 +94,28 @@ Compose 기본 태그: `byeonghyunchoi/valuehub-*:prod`
 
 - `NEXT_PUBLIC_API_URL` (또는 팀에서 쓰는 API base env) = `http://<Apps EIP>:8000`
 - Auth CORS: Apps `.env`의 `AUTH_ALLOWED_ORIGINS`에 Vercel URL 포함
+
+## 8. Apps EC2 루트 디스크 증설
+
+Docker 이미지가 쌓이면 `/` 가 8GB에서 100%가 된다. prune만으로는 부족하면 **EBS 크기를 늘린 뒤 OS에서 파일시스템을 확장**한다. (스왑과 무관)
+
+대상: `i-0cc2c7df37a02b606` / `ap-northeast-2` / 권장 30GB
+
+### 8-1. AWS 콘솔
+
+1. EC2 → 인스턴스 `i-0cc2c7df37a02b606` → Storage → 루트 볼륨 클릭
+2. Actions → Modify volume → Size **30** GiB → Modify
+3. 상태가 `optimizing` / `in-use` 가 될 때까지 대기 (인스턴스 재시작 보통 불필요)
+
+### 8-2. SSH 후 파일시스템 확장 (Ubuntu)
+
+```bash
+lsblk
+sudo growpart /dev/nvme0n1 1
+sudo resize2fs /dev/nvme0n1p1
+df -h /
+```
+
+`lsblk`에서 루트 디바이스/파티션 번호가 다르면 그에 맞춘다. XFS면 `resize2fs` 대신 `sudo xfs_growfs /` .
+
+성공 시 `df -h /` 의 Size가 ~30G, Use%가 크게 내려간다.
