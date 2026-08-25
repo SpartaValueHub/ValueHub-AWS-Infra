@@ -11,6 +11,14 @@ x-app-common: &app-common
   networks:
     - valuehub-apps
 
+# Media (S3 + CloudFront) — values from Apps EC2 .env; EC2 Instance Role used for AWS API
+x-media-env: &media-env
+  AWS_REGION: ${AWS_REGION:-ap-northeast-2}
+  S3_BUCKET: ${S3_BUCKET}
+  CLOUDFRONT_DOMAIN: ${CLOUDFRONT_DOMAIN}
+  CLOUDFRONT_BASE_URL: ${CLOUDFRONT_BASE_URL}
+  CLOUDFRONT_DISTRIBUTION_ID: ${CLOUDFRONT_DISTRIBUTION_ID:-}
+
 services:
   redis:
     <<: *app-common
@@ -80,6 +88,7 @@ services:
       discovery:
         condition: service_healthy
     environment:
+      <<: *media-env
       SPRING_PROFILES_ACTIVE: dev
       SERVER_PORT: "8081"
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/auth_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
@@ -109,6 +118,7 @@ services:
       discovery:
         condition: service_healthy
     environment:
+      <<: *media-env
       SPRING_PROFILES_ACTIVE: dev
       SERVER_PORT: "8083"
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/member_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
@@ -125,6 +135,7 @@ services:
       discovery:
         condition: service_healthy
     environment:
+      <<: *media-env
       SPRING_PROFILES_ACTIVE: dev
       SERVER_PORT: "8084"
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/category_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
@@ -141,6 +152,7 @@ services:
       discovery:
         condition: service_healthy
     environment:
+      <<: *media-env
       SPRING_PROFILES_ACTIVE: dev
       SERVER_PORT: "8085"
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/product_post_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
@@ -157,6 +169,7 @@ services:
       discovery:
         condition: service_healthy
     environment:
+      <<: *media-env
       SPRING_PROFILES_ACTIVE: dev
       SERVER_PORT: "8086"
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/member_regions_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
@@ -173,6 +186,7 @@ services:
       discovery:
         condition: service_healthy
     environment:
+      <<: *media-env
       SPRING_PROFILES_ACTIVE: dev
       SERVER_PORT: "8087"
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/reports_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
@@ -189,6 +203,7 @@ services:
       discovery:
         condition: service_healthy
     environment:
+      <<: *media-env
       SPRING_PROFILES_ACTIVE: dev
       SERVER_PORT: "8092"
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/reservations_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
@@ -205,6 +220,7 @@ services:
       discovery:
         condition: service_healthy
     environment:
+      <<: *media-env
       SPRING_PROFILES_ACTIVE: dev
       SERVER_PORT: "8088"
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/reviews_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
@@ -221,6 +237,7 @@ services:
       discovery:
         condition: service_healthy
     environment:
+      <<: *media-env
       SPRING_PROFILES_ACTIVE: dev
       SERVER_PORT: "8089"
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/notifications_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
@@ -237,6 +254,7 @@ services:
       discovery:
         condition: service_healthy
     environment:
+      <<: *media-env
       SPRING_PROFILES_ACTIVE: dev
       SERVER_PORT: "8090"
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/premium_plans_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
@@ -253,6 +271,7 @@ services:
       discovery:
         condition: service_healthy
     environment:
+      <<: *media-env
       SPRING_PROFILES_ACTIVE: dev
       SERVER_PORT: "8091"
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/bo_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
@@ -269,6 +288,7 @@ services:
       discovery:
         condition: service_healthy
     environment:
+      <<: *media-env
       SPRING_PROFILES_ACTIVE: dev
       SERVER_PORT: "8082"
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:3306/chat_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8

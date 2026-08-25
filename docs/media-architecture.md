@@ -1,6 +1,7 @@
 # ValueHub 미디어 — S3 + CloudFront 아키텍처 & 흐름
 
-> 아래 값은 **예시(placeholder)** 이다. 실제 버킷명·배포 ID·도메인·키는 AWS 콘솔 또는 `secrets/media-app.env`(git 제외)를 본다.
+> 아래 값은 **예시(placeholder)** 이다. 실제 버킷명·배포 ID·도메인·키는 AWS 콘솔 또는 `secrets/media-app.env`(git 제외)를 본다.  
+> **MSA API 구현(글·프로필·채팅, 5MB 제한)**: [media-api-spec.md](./media-api-spec.md)
 
 리전 예: `ap-northeast-2` / profile 예: `valuehub`
 
@@ -138,6 +139,8 @@ CLOUDFRONT_BASE_URL=https://dxxxxxxxxxxxx.cloudfront.net
 공개 URL 규칙 예:
 `https://<cloudfront-domain>/posts/{uuid}.jpg`
 
+도메인별 prefix·5MB·Presigned API 상세는 [media-api-spec.md](./media-api-spec.md).
+
 ---
 
 ## 7. 세팅 체크리스트
@@ -150,10 +153,10 @@ CLOUDFRONT_BASE_URL=https://dxxxxxxxxxxxx.cloudfront.net
 
 ### 아직 안 한 것 (다음 작업)
 
-- [ ] 테스트 객체로 CloudFront URL 검증
+- [x] 테스트 객체로 CloudFront URL 검증 (S3 PUT → CloudFront GET 200)
+- [x] Apps EC2 실 `.env` + compose로 MSA에 `S3_BUCKET` / `CLOUDFRONT_*` 주입 (Access Key 없음, Instance Role)
 - [ ] (선택) `img.<your-domain>` 커스텀 도메인 + ACM
-- [ ] MSA에 Presigned 업로드 / 삭제 API 구현
-- [ ] Apps `.env`에 `S3_BUCKET`, `CLOUDFRONT_BASE_URL` 반영
+- [ ] MSA에 Presigned 업로드 / 삭제 API 구현 → 스펙: [media-api-spec.md](./media-api-spec.md)
 
 ---
 
@@ -163,6 +166,7 @@ CLOUDFRONT_BASE_URL=https://dxxxxxxxxxxxx.cloudfront.net
 | --- | --- |
 | `docs/media-s3-cloudfront.md` | 세팅 진행 로그 |
 | `docs/media-architecture.md` | 본 문서 (흐름·아키텍처) |
+| `docs/media-api-spec.md` | 글·프로필·채팅 API / 5MB 규칙 |
 | `env/media-app.env.example` | env 이름 예시 (커밋 OK) |
 | `secrets/media-app.env` | 로컬 실키 (git ignore) |
 | `secrets/README.md` | secrets 디렉터리 안내 |

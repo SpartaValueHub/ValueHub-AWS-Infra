@@ -54,11 +54,20 @@ flowchart TD
 | Apps compose | `compose.prod-apps.yml` |
 | DB compose | `compose.prod-db.yml` |
 | 원격 경로 | `/opt/valuehub-aws-infra` |
-| Infra 워크플로 | `Deploy Apps (Prod)` (compose scp + `docker compose up`) |
+| Infra 워크플로 | `Deploy Apps (Prod)` — `compose.prod-apps.yml` scp → EC2 전체 `compose up` |
 | 서비스 CD 템플릿 | `templates/deploy-aws.yml` |
 
 > 템플릿은 복붙용 원본이다. 실제 트리거는 **각 서비스 레포**의 `.github/workflows/deploy-aws.yml`이 담당한다.  
 > Infra 템플릿만 고쳐도 서비스에 자동 반영되지 않는다.
+
+### 두 배포 경로 (역할 분리)
+
+| 경로 | 트리거 | 하는 일 | 안 하는 일 |
+| --- | --- | --- | --- |
+| **서비스 CD** (`deploy-aws.yml`) | 서비스 레포 `main`/`develop` | 해당 서비스 이미지만 pull/up | compose 파일 동기화 안 함 |
+| **Infra Deploy Apps** (`deploy-apps.yml`) | Infra `main` + `compose.prod-apps.yml` / `env/**` / `scripts/**` 변경 | compose를 EC2에 scp 후 전체 up | `.env` 실값·시크릿 수정 안 함 |
+
+미디어(`x-media-env` → `S3_BUCKET` 등)는 **compose 정의는 Infra Deploy Apps**로 자동 반영되고, **실값은 Apps EC2 `.env`**에만 둔다.
 
 ---
 
@@ -143,7 +152,9 @@ Gateway 프록시 예:
 ## `.env`와의 관계
 
 - 실값 `.env`는 Apps EC2 `/opt/valuehub-aws-infra/.env` (git 비포함)
-- `main`/`develop` 배포는 **이미지·컨테이너만** 갱신하고 `.env` 파일은 건드리지 않음
-- 값 변경은 EC2에서 수동 수정 후 해당 서비스 `compose up -d` 재기동
+- 서비스 CD는 **이미지·컨테이너만** 갱신하고 `.env` / compose 파일을 건드리지 않음
+- Infra Deploy Apps는 **compose만** EC2에 덮어쓰고, `.env`는 그대로 둠
+- `.env` 값 변경은 EC2에서 수동 수정 후 해당 서비스 `compose up -d` 재기동
+- 미디어: [media-s3-cloudfront.md](./media-s3-cloudfront.md), API 규약: [media-api-spec.md](./media-api-spec.md)
 
 자세한 흐름: [env-flow.md](./env-flow.md)
