@@ -15,7 +15,7 @@ services:
   redis:
     <<: *app-common
     image: redis:7-alpine
-    container_name: valuehub-redis
+    container_name: redis
     volumes:
       - redis-data:/data
     healthcheck:
@@ -96,6 +96,8 @@ services:
       RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY:-}
       AUTH_ALLOWED_ORIGINS: ${AUTH_ALLOWED_ORIGINS}
       JAVA_TOOL_OPTIONS: -Xms128m -Xmx384m
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
     volumes:
       - ./secrets:/secrets:ro
 
