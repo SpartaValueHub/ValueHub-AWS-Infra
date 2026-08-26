@@ -1,0 +1,17 @@
+# Copy into Chat / Product-Post application.yaml
+# Bootstrap is injected by compose: SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:19092
+# Chat group-id: chat-service
+# Product-Post group-id: listing-service
+spring:
+  kafka:
+    consumer:
+      group-id: chat-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      enable-auto-commit: true
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.use.type.headers: false
+        # Set default type to that listener's DTO, e.g.
+        # spring.json.value.default.type: com.valuehub.chat.kafka.ReservationEvent

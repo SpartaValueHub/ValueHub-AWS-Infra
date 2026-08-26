@@ -14,7 +14,7 @@ ValueHub **AWS 운영(Prod) 배포** 전용 저장소입니다.
          │  Gateway :8000        │
          │  Discovery (Eureka)   │
          │  Auth, Member, Chat…  │
-         │  Redis                │
+         │  Redis, Kafka         │
          └───────────┬───────────┘
                      │ private / SG
          ┌───────────▼───────────┐
@@ -26,7 +26,7 @@ ValueHub **AWS 운영(Prod) 배포** 전용 저장소입니다.
 
 | 구분 | 역할 |
 |------|------|
-| Apps EC2 | 마이크로서비스 + Redis + Docker Compose |
+| Apps EC2 | 마이크로서비스 + Redis + Kafka + Docker Compose |
 | DB EC2 | MySQL + MongoDB만 |
 | 이 레포 | Prod compose, env 예시, EC2 부트스트랩, GitHub Actions |
 | 각 서비스 레포 | 이미지 빌드 → Docker Hub (`:prod` 태그) |
@@ -47,6 +47,8 @@ scripts/
   deploy-apps.yml       # main push → Apps EC2 배포
 docs/
   aws-setup.md          # EC2 / SG / EIP 체크리스트
+  kafka.md              # 토픽·페이로드 (reservation / product / member)
+  kafka-concepts.md     # 브로커 / 토픽 / 프로듀서 / 컨슈머
 ```
 
 ## 배포 흐름
@@ -63,7 +65,7 @@ DB EC2는 자주 안 바꿉니다. 최초 `compose.prod-db.yml`로 기동 후 �
 2. 각 EC2에서 bootstrap 스크립트 실행  
 3. `env/*.example` → EC2의 `.env`로 복사 후 비밀번호·호스트 채우기  
 4. DB EC2: `docker compose -f compose.prod-db.yml --env-file .env up -d`  
-5. Apps EC2: DB private IP를 `.env`에 넣고 `compose.prod-apps.yml` up  
+5. Apps EC2: DB private IP를 `.env`에 넣고 (`MYSQL_HOST`, `MONGODB_HOST`) `compose.prod-apps.yml` up  
 6. GitHub Secrets 등록 후 Actions로 자동 배포
 
 자세한 Secrets 목록은 `docs/aws-setup.md`를 보세요.
