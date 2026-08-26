@@ -10,7 +10,7 @@ Gateway 통합 Swagger로 Auth/Chat 등 API 실검증까지 완료.
 
 | 구분 | 역할 | 인스턴스 | 스펙 | Elastic IP |
 | --- | --- | --- | --- | --- |
-| **Apps EC2** | Eureka, Gateway, 전 MSA | `i-0cc2c7df37a02b606` | t3.large | `54.116.150.139` |
+| **Apps EC2** | Eureka, Gateway, 전 MSA, Redis, Kafka | `i-0cc2c7df37a02b606` | t3.large | `54.116.150.139` |
 | **DB EC2** | MySQL + MongoDB (단일 노드 RS) | `i-00753b29433e6351c` | t3.medium | `52.78.72.232` |
 
 - 리전: `ap-northeast-2` (서울)
@@ -158,3 +158,4 @@ Gateway 프록시 예:
 - 미디어: [media-s3-cloudfront.md](./media-s3-cloudfront.md), API 규약: [media-api-spec.md](./media-api-spec.md)
 
 자세한 흐름: [env-flow.md](./env-flow.md)
+Kafka 토픽·페이로드: [kafka.md](./kafka.md)

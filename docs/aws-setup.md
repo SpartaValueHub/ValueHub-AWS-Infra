@@ -9,7 +9,7 @@
 
 | 구분 | 역할 | 인스턴스 | 스펙 | Elastic IP | Private IP |
 | --- | --- | --- | --- | --- | --- |
-| **Apps EC2** | Eureka, Gateway, 전 MSA | `i-0cc2c7df37a02b606` | t3.large | `54.116.150.139` | `172.31.6.86` |
+| **Apps EC2** | Eureka, Gateway, 전 MSA, Redis, Kafka | `i-0cc2c7df37a02b606` | t3.large | `54.116.150.139` | `172.31.6.86` |
 | **DB EC2** | MySQL 8.4 + MongoDB 7 (단일 노드 RS) | `i-00753b29433e6351c` | t3.medium | `52.78.72.232` | `172.31.8.143` |
 
 - 리전: `ap-northeast-2` (서울)
@@ -58,11 +58,12 @@ GitHub Actions (Deploy AWS)  — 빌드는 Actions runner가 수행
 - DB는 서비스 CI/CD와 **별개**. DB EC2에서 Compose로 MySQL/Mongo **공식 이미지** 기동.
 - `scripts/mysql-init-schemas.sql`은 MySQL **`mysql-data` 볼륨이 비어 있을 때 최초 1회**만 실행 → `auth_db` 등 **DB 이름만** 생성 (테이블 아님).
 - 테이블은 각 MSA가 기동할 때 JPA `ddl-auto` 등으로 Entity 기준 반영 (서비스별 설정 상이).
+- Kafka는 **Apps EC2** (`compose.prod-apps.yml`). 토픽은 `kafka-init`이 기동 때 생성. 계약은 [kafka.md](./kafka.md).
 
 ### 2-3. 런타임 API (배포와 별개)
 
 ```text
-FE / Swagger → Gateway :8000 → Eureka :8761 + MSA → DB private (MySQL :3306 / Mongo :27017)
+FE / Swagger → Gateway :8000 → Eureka :8761 + MSA → DB private (MySQL :3306 / Mongo :27017). Kafka는 Apps 내부 `kafka:19092`.
 ```
 
 | 용도 | URL |
@@ -82,6 +83,9 @@ FE / Swagger → Gateway :8000 → Eureka :8761 + MSA → DB private (MySQL :330
 | SSH | 22 | 관리 IP | 관리 / Actions 배포 |
 | Custom TCP | 8000 | `0.0.0.0/0` (현재 팀 테스트) | Gateway |
 | Custom TCP | 8761 | `0.0.0.0/0` (현재 팀 테스트) | Eureka 대시보드 |
+
+Kafka·Kafka UI는 `127.0.0.1`만 바인딩. SG에 9092/8080을 열지 말 것. UI는 SSH 터널:  
+`ssh -i .valuehub-aws-prod.pem -L 8080:127.0.0.1:8080 ubuntu@54.116.150.139`
 
 나중에 HTTPS면 ALB/Nginx 443만 공용, 8000·8761은 축소 권장.
 
@@ -210,6 +214,8 @@ Infra 워크플로 `Deploy Apps (Prod)`: compose 등을 Apps EC2에 scp 후 `doc
 | bo | `bo_db` |
 | chat | `chat_db` (+ Mongo `chatting_db`) |
 
+Kafka: 같은 compose의 `kafka:19092`. `member` / `listing` / `reservations` / `chat`에 `SPRING_KAFKA_BOOTSTRAP_SERVERS` 고정 주입. 토픽 계약은 [kafka.md](./kafka.md).
+
 Workbench에서 DB 이름을 바꿔도, **compose URL을 같이 안 바꾸면** 앱은 예전 이름을 본다.
 
 ---
@@ -257,5 +263,6 @@ df -h /
 | --- | --- |
 | [cicd-flow.md](./cicd-flow.md) | CI/CD·시퀀스·서비스 목록 |
 | [env-flow.md](./env-flow.md) | `.env` 런타임 주입 |
+| [kafka.md](./kafka.md) | Kafka 토픽·페이로드 |
 | `templates/deploy-aws.yml` | 서비스 Deploy AWS 템플릿 |
 | `env/apps.env.example` / `env/db.env.example` | env 이름 예시 |

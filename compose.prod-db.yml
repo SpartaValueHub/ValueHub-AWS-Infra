@@ -2,6 +2,8 @@
 # Usage on DB EC2:
 #   cp env/db.env.example .env
 #   docker compose -f compose.prod-db.yml --env-file .env up -d
+#
+# Kafka runs on Apps EC2 (compose.prod-apps.yml), not here.
 
 services:
   mysql:
