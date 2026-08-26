@@ -48,6 +48,7 @@ scripts/
 docs/
   aws-setup.md          # EC2 / SG / EIP 체크리스트
   kafka.md              # 토픽·페이로드 (reservation / product / member)
+  kafka-concepts.md     # 브로커 / 토픽 / 프로듀서 / 컨슈머
 ```
 
 ## 배포 흐름

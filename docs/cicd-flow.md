@@ -159,3 +159,4 @@ Gateway 프록시 예:
 
 자세한 흐름: [env-flow.md](./env-flow.md)
 Kafka 토픽·페이로드: [kafka.md](./kafka.md)
+용어(브로커 / 토픽 / 프로듀서 / 컨슈머): [kafka-concepts.md](./kafka-concepts.md)

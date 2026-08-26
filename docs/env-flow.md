@@ -149,3 +149,4 @@ Docker는 컨테이너 **시작 시점**에 env를 넣는다.
 - CI/CD 전체 흐름: [cicd-flow.md](./cicd-flow.md)
 - AWS 셋업: [aws-setup.md](./aws-setup.md)
 - Kafka 토픽: [kafka.md](./kafka.md)
+- Kafka 용어: [kafka-concepts.md](./kafka-concepts.md)

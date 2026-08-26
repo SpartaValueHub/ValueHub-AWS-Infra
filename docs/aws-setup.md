@@ -264,5 +264,6 @@ df -h /
 | [cicd-flow.md](./cicd-flow.md) | CI/CD·시퀀스·서비스 목록 |
 | [env-flow.md](./env-flow.md) | `.env` 런타임 주입 |
 | [kafka.md](./kafka.md) | Kafka 토픽·페이로드 |
+| [kafka-concepts.md](./kafka-concepts.md) | 브로커 / 토픽 / 프로듀서 / 컨슈머 |
 | `templates/deploy-aws.yml` | 서비스 Deploy AWS 템플릿 |
 | `env/apps.env.example` / `env/db.env.example` | env 이름 예시 |

@@ -3,7 +3,7 @@
 Outbox / Saga 없음. 각 서비스가 **자기 DB 커밋 후** `KafkaTemplate.send` 한 번.
 Kafka는 MySQL/Mongo에 쓰지 않는다. 메시지 버스만 제공한다.
 
-브로커 기동은 [aws-setup.md](./aws-setup.md). 이 문서가 토픽·페이로드 계약의 기준이다.
+브로커 기동은 [aws-setup.md](./aws-setup.md). 용어(브로커·토픽·프로듀서·컨슈머)는 [kafka-concepts.md](./kafka-concepts.md). 이 문서가 토픽·페이로드 계약의 기준이다.
 
 ---
 
