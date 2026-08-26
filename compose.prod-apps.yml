@@ -249,13 +249,10 @@ services:
     depends_on:
       discovery:
         condition: service_healthy
-<<<<<<< HEAD
-      kafka-init:
-        condition: service_completed_successfully
-=======
       redis:
         condition: service_healthy
->>>>>>> main
+      kafka-init:
+        condition: service_completed_successfully
     environment:
       <<: *media-env
       SPRING_PROFILES_ACTIVE: dev
