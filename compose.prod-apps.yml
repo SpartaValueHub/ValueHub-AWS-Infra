@@ -249,8 +249,13 @@ services:
     depends_on:
       discovery:
         condition: service_healthy
+<<<<<<< HEAD
       kafka-init:
         condition: service_completed_successfully
+=======
+      redis:
+        condition: service_healthy
+>>>>>>> main
     environment:
       <<: *media-env
       SPRING_PROFILES_ACTIVE: dev
@@ -259,6 +264,8 @@ services:
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery:8761/eureka
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
       JAVA_TOOL_OPTIONS: -Xms128m -Xmx256m
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:19092
 
